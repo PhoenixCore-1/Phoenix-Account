@@ -80,7 +80,7 @@ class FinancialAccountView:
     def summary(self, context: UserContext, account_id: str) -> FinancialAccountSummary:
         self._authorize(context, account_id)
         summary = self.accounts.get_summary(context, account_id)
-        self._validate_summary(context, summary)
+        self._validate_summary(context, account_id, summary)
         return summary
 
     def records(
@@ -100,6 +100,9 @@ class FinancialAccountView:
         page = self.accounts.list_records(context, account_id, record_type, limit, cursor)
         if page.as_of is None:
             raise StaleDataError("Financial source freshness metadata is required")
+        for record in page.records:
+            if record.account_id != account_id:
+                raise IntegrationUnavailableError("Financial source returned a mismatched account")
         return page
 
     def command(
@@ -123,10 +126,12 @@ class FinancialAccountView:
         self.authorization.require_permission(context, FINANCIAL_PERMISSION)
 
     @staticmethod
-    def _validate_summary(context: UserContext, summary: FinancialAccountSummary) -> None:
+    def _validate_summary(
+        context: UserContext, requested_account_id: str, summary: FinancialAccountSummary
+    ) -> None:
         if summary.tenant_id != context.tenant_id:
             raise IntegrationUnavailableError("Financial source returned a cross-tenant record")
-        if summary.account_id != summary.account_id:
-            raise IntegrationUnavailableError("Financial source returned an invalid account identity")
+        if summary.account_id != requested_account_id:
+            raise IntegrationUnavailableError("Financial source returned a mismatched account")
         if summary.as_of is None:
             raise StaleDataError("Financial summary freshness metadata is required")
