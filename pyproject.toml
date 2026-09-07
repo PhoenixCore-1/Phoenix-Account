@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=84", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "phoenix-account-360"
+version = "1.0.0"
+description = "Phoenix Account 360 module"
+requires-python = ">=3.13,<3.14"
+dependencies = []
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.setuptools.packages.find]
+include = ["account_360*"]
