@@ -98,7 +98,7 @@ def test_timeline_event_id_is_idempotent_per_tenant_and_source():
              producer_version, title, category, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        values,
+        values[:-1],
     )
 
     with pytest.raises(sqlite3.IntegrityError):
@@ -110,7 +110,11 @@ def test_timeline_event_id_is_idempotent_per_tenant_and_source():
                  producer_version, title, category, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (*values[:6], "event-1", *values[7:]),
+            (
+                "event-row-2", "tenant-1", "account-1", "crm", "activity", "crm-1",
+                "event-1", "CALL", "2026-01-02T10:00:00Z", "2026-01-02T10:01:00Z",
+                "crm-1.0", "Call", "RELATIONSHIP", "2026-01-02T10:02:00Z",
+            ),
         )
 
 
