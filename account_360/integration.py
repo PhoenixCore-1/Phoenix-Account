@@ -11,6 +11,7 @@ from typing import Any, Mapping, Protocol, Sequence
 from .core_adapter import UserContext
 
 SUPPORTED_MODULES = ("crm", "sales", "accounts", "inventory", "procurement")
+MAX_PAGE_SIZE = 500
 
 
 @dataclass(frozen=True)
@@ -34,11 +35,15 @@ class QueryRequest:
     cursor: str | None = None
 
     def validate(self) -> None:
+        if not self.context.user_id or not self.context.tenant_id:
+            raise ValueError("authenticated tenant context is required")
         if self.source_module not in SUPPORTED_MODULES:
             raise ValueError("unsupported source module")
+        if not self.operation:
+            raise ValueError("operation is required")
         if not self.account_id:
             raise ValueError("account_id is required")
-        if self.limit < 1 or self.limit > 500:
+        if self.limit < 1 or self.limit > MAX_PAGE_SIZE:
             raise ValueError("limit must be between 1 and 500")
 
 
@@ -75,6 +80,8 @@ class DomainEvent:
             raise ValueError("tenant_id and event_id are required")
         if not self.source_record_id or not self.event_type:
             raise ValueError("source_record_id and event_type are required")
+        if not self.producer_version:
+            raise ValueError("producer_version is required")
 
 
 @dataclass(frozen=True)
@@ -87,6 +94,8 @@ class CommandRequest:
     idempotency_key: str
 
     def validate(self) -> None:
+        if not self.context.user_id or not self.context.tenant_id:
+            raise ValueError("authenticated tenant context is required")
         if self.target_module not in SUPPORTED_MODULES:
             raise ValueError("unsupported target module")
         if not self.account_id:
@@ -116,12 +125,8 @@ class CrossModuleGateway:
 
     def query(self, request: QueryRequest) -> QueryResult:
         request.validate()
-        if request.context.tenant_id != request.context.tenant_id:
-            raise ValueError("invalid tenant context")
         return self.query_port.query(request)
 
     def execute(self, request: CommandRequest) -> Mapping[str, Any]:
         request.validate()
-        if request.context.tenant_id == "":
-            raise ValueError("tenant_id is required")
         return self.command_port.execute(request)
